@@ -7,10 +7,6 @@
     <list default="true" id="4b7cd29b-bc54-4918-bc6a-19dc4bf8c825" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/cli.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/texchroma/colour_correction.py" beforeDir="false" afterPath="$PROJECT_DIR$/texchroma/colour_correction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/texchroma/image_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/texchroma/image_processing.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

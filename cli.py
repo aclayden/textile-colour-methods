@@ -42,28 +42,61 @@ def _prompt_correction_choice(config_dir="config"):
         if f.startswith("swatches_") and f.endswith(".yaml")
     ) if os.path.isdir(config_dir) else []
 
-    print("\nNo colour correction flag supplied.")
-    if existing:
-        print("Available swatch files:")
-        for p in existing:
-            print(f"  {p}")
-    print("  [c] capture new swatches  [s] load swatch YAML  [n] skip  [q] quit\n")
-
     while True:
-        choice = input("Choice: ").strip().lower()
+        print("\nColour correction")
+        print("─" * 40)
+
+        if existing:
+            print("Most recent swatch file:")
+            print(f"  [y] Use {os.path.basename(existing[-1])}")
+            print(f"  [l] List and choose from all saved swatches")
+        print("  [c] Capture new swatches")
+        print("  [s] Load swatch YAML from path")
+        print("  [n] Skip colour correction")
+        print("  [q] Quit")
+
+        choice = input("\nChoice: ").strip().lower()
+
         if choice == "q":
             sys.exit(0)
+
         if choice == "n":
             return None
+
+        if choice == "y" and existing:
+            return _load_ccm(existing[-1])
+
+        if choice == "l" and existing:
+            print("\nSaved swatch files:")
+            for i, p in enumerate(existing):
+                print(f"  [{i+1}] {os.path.basename(p)}")
+            print("  [b] Back")
+            sel = input("\nChoice: ").strip().lower()
+            if sel == "b":
+                continue
+            if sel.isdigit() and 1 <= int(sel) <= len(existing):
+                return _load_ccm(existing[int(sel) - 1])
+            print("  Invalid selection.")
+            continue
+
         if choice == "c":
-            image = os.path.normpath(input("Path to ColorChecker image: ").strip())
+            print("  [b] Back")
+            image = input("Path to ColorChecker image: ").strip()
+            if image.lower() == "b":
+                continue
+            image = os.path.normpath(image)
             if not os.path.isfile(image):
                 print(f"  Not found: {image}")
                 continue
             ccm, path = cc.run_correction_session(image, config_dir)
             return ccm
+
         if choice == "s":
+            print("  [b] Back")
             path = input("Path to swatch YAML: ").strip()
+            if path.lower() == "b":
+                continue
+            path = os.path.normpath(path)
             if os.path.isfile(path):
                 return _load_ccm(path)
             print(f"  Not found: {path}")
