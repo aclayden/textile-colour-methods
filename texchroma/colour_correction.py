@@ -7,8 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from PIL import Image
-import rawpy
 import yaml
+
 
 LINEAR_FORMATS = {'cr2', 'nef', 'arw', 'raf', 'rw2', 'dng', 'exr', 'hdr'}
 RAW_FORMATS    = {'cr2', 'nef', 'arw', 'raf', 'rw2', 'dng'}
@@ -20,15 +20,9 @@ def is_raw(path):    return _ext(path) in RAW_FORMATS
 
 
 def read_image_linear(path):
-    """Read any supported image as a linear float32 RGB array (H, W, 3)."""
-    if is_raw(path):
-        with rawpy.imread(path) as raw:
-            rgb = raw.postprocess(
-                use_camera_wb=False, use_auto_wb=False,
-                no_auto_bright=True, output_bps=16, gamma=(1, 1),
-            )
-        return rgb.astype(np.float32) / 65535.0
-    return colour.cctf_decoding(colour.io.read_image(path))
+    img = Image.open(path).convert("RGB")
+    rgb = np.array(img).astype(np.float32) / 255.0
+    return colour.cctf_decoding(rgb)
 
 
 def capture_swatches(image_file):

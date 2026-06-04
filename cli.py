@@ -24,8 +24,9 @@ def _resolve_config(args):
         config["n_clusters"] = args.n_clusters
     if args.mask_threshold is not None:
         config["mask_threshold"] = args.mask_threshold
+    if args.collapse_threshold is not None:
+        config["collapse_threshold"] = args.collapse_threshold
     return config
-
 
 def _load_ccm(path):
     if not os.path.isfile(path):
@@ -55,7 +56,7 @@ def _prompt_correction_choice(config_dir="config"):
         if choice == "n":
             return None
         if choice == "c":
-            image = input("Path to ColorChecker image: ").strip()
+            image = os.path.normpath(input("Path to ColorChecker image: ").strip())
             if not os.path.isfile(image):
                 print(f"  Not found: {image}")
                 continue
@@ -67,20 +68,20 @@ def _prompt_correction_choice(config_dir="config"):
                 return _load_ccm(path)
             print(f"  Not found: {path}")
 
-
 def main():
     parser = argparse.ArgumentParser(prog="texchroma",
         description="Textile colour measurement pipeline.")
 
-    parser.add_argument("--image-dir",      default="images")
-    parser.add_argument("--output-dir",     default="outputs")
-    parser.add_argument("--config",         default="config/config.yaml")
-    parser.add_argument("--n-clusters",     type=int)
-    parser.add_argument("--mask-threshold", type=float)
-    parser.add_argument("--single",         metavar="FILE")
-    parser.add_argument("--purge",          action="store_true")
-    parser.add_argument("--purge-all",      action="store_true")
-    parser.add_argument("--no-correct",     action="store_true")
+    parser.add_argument("--image-dir",          default="images/garments")
+    parser.add_argument("--output-dir",         default="outputs")
+    parser.add_argument("--config",             default="config/config.yaml")
+    parser.add_argument("--n-clusters",         type=int)
+    parser.add_argument("--mask-threshold",     type=float)
+    parser.add_argument("--collapse-threshold", type=float)
+    parser.add_argument("--single",             metavar="FILE")
+    parser.add_argument("--purge",              action="store_true")
+    parser.add_argument("--purge-all",          action="store_true")
+    parser.add_argument("--no-correct",         action="store_true")
 
     corr = parser.add_mutually_exclusive_group()
     corr.add_argument("--correct",  metavar="CHECKER_IMAGE")
@@ -88,6 +89,13 @@ def main():
 
     args = parser.parse_args()
     config_dir = os.path.dirname(args.config) or "config"
+
+    if args.purge_all:
+        img.purge_images(args.image_dir, args.output_dir, purge_all=True)
+        return
+    if args.purge:
+        img.purge_images(args.image_dir, args.output_dir)
+        return
 
     if args.correct:
         ccm, _ = cc.run_correction_session(args.correct, config_dir)
@@ -98,15 +106,10 @@ def main():
     else:
         ccm = _prompt_correction_choice(config_dir)
 
-    if args.purge_all:
-        img.purge_images(args.image_dir, args.output_dir, purge_all=True)
-    elif args.purge:
-        img.purge_images(args.image_dir, args.output_dir)
-    elif args.single:
+    if args.single:
         img.process_single_image(args.single, _resolve_config(args), args.output_dir, ccm=ccm)
     else:
         img.process_all_images(args.image_dir, args.output_dir, _resolve_config(args), ccm=ccm)
-
 
 if __name__ == "__main__":
     main()

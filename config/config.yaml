@@ -11,3 +11,4 @@ hex_colors: [
     "#000000",  # black
 ]
 random_state: 17 # Any int will do here
+collapse_threshold: 2.0

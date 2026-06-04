@@ -1,7 +1,24 @@
 [project]
-name = "colorisepractice"
+name = "texchroma"
 version = "0.1.0"
-description = "Add your description here"
+description = "Colour measurement pipeline for textile and archive research."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "colour-science",
+    "scikit-learn",
+    "scikit-image",
+    "numpy",
+    "Pillow",
+    "matplotlib",
+    "pyyaml",
+    "rembg",
+    "tqdm"
+]
+
+[project.scripts]
+texchroma = "texchroma.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -6,6 +6,8 @@ import matplotlib.colors as mcolors
 from PIL import Image
 from sklearn.cluster import KMeans
 import skimage.color as sc
+from itertools import combinations
+from tqdm import tqdm
 
 # ---------------------------------------------------------------------------
 # Background removal
@@ -91,7 +93,7 @@ def image_prep(ind_image_or_pil, mask_threshold):
     mask    = alpha > mask_threshold
 
     rgb_float = rgb.astype(np.float32) / 255.0
-    lab       = rgb2lab(rgb_float)
+    lab       = sc.rgb2lab(rgb_float)
     ab_pixels = lab[..., 1:3][mask]   # (N, 2)
 
     if ab_pixels.shape[0] == 0:
@@ -107,8 +109,31 @@ def sample_pixels(ab_pixels, rand_int):
     idx = np.random.choice(ab_pixels.shape[0], n_samples, replace=False)
     return ab_pixels[idx]
 
+def collapse_clusters(centroids, labels, threshold=2.0):
+    import colour
+    active = list(range(len(centroids)))
+    remap = list(range(len(centroids)))
 
-def kmeans_clustering(sample, ab_pixels, n_clusters, rand_int):
+    # Pad ab centroids to Lab for delta_E: neutral L=50
+    def to_lab(ab):
+        return np.array([50.0, ab[0], ab[1]])
+
+    for i, j in combinations(active, 2):
+        if j not in active:
+            continue
+        if colour.delta_E(to_lab(centroids[i]), to_lab(centroids[j]), method="CIE 2000") < threshold:
+            active.remove(j)
+            remap[j] = i
+
+    merged_centroids = centroids[active]
+    merged_labels = np.array([remap[l] for l in labels])
+    reindex = {old: new for new, old in enumerate(active)}
+    merged_labels = np.array([reindex[l] for l in merged_labels])
+
+    return merged_centroids, merged_labels, {"original_k": len(remap), "effective_k": len(active)}
+
+
+def kmeans_clustering(sample, ab_pixels, n_clusters, rand_int, collapse_threshold=2.0):
     if n_clusters < 1:
         raise ValueError(f"n_clusters must be at least 1, got {n_clusters}")
     if ab_pixels.shape[0] < n_clusters:
@@ -119,7 +144,10 @@ def kmeans_clustering(sample, ab_pixels, n_clusters, rand_int):
     kmeans = KMeans(n_clusters=n_clusters, random_state=rand_int)
     kmeans.fit(sample)
     labels_fg = kmeans.predict(ab_pixels)
-    return kmeans, labels_fg
+    centroids, labels_fg, collapse_report = collapse_clusters(
+        kmeans.cluster_centers_, labels_fg, threshold=collapse_threshold
+    )
+    return centroids, labels_fg, collapse_report
 
 
 def convert_to_palette(hex_colors):
@@ -197,10 +225,12 @@ def process_single_image(image_file, config, output_dir, ccm=None):
 
     ab_pixels, mask = image_prep(corrected_image, config["mask_threshold"])
     sample          = sample_pixels(ab_pixels, rand_int)
-    kmeans, labels_fg = kmeans_clustering(
-        sample, ab_pixels, config["n_clusters"], rand_int
+    centroids, labels_fg, collapse_report = kmeans_clustering(
+        sample, ab_pixels, config["n_clusters"], rand_int,
+        collapse_threshold=config.get("collapse_threshold", 2.0)
     )
-    palette = convert_to_palette(config["hex_colors"][: config["n_clusters"]])
+    print(f"  clusters: {collapse_report['original_k']} → {collapse_report['effective_k']}")
+    palette = convert_to_palette(config["hex_colors"][: collapse_report["effective_k"]])
     output_builder(palette, labels_fg, mask, image_file, output_dir)
 
 
@@ -210,7 +240,8 @@ def process_all_images(image_dir, output_dir, config, ccm=None):
     config must already be loaded (dict). ccm is the optional correction matrix.
     """
     image_list = process_images(image_dir)
-    for img_path in image_list:
+    for img_path in tqdm(image_list, desc="Processing images", unit="img"):
+        tqdm.write(f"  → {os.path.basename(img_path)}")
         process_single_image(img_path, config, output_dir, ccm=ccm)
 
 
